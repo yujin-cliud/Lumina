@@ -54,11 +54,12 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import {
-    getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc
+    initializeFirestore,  // ← 追加
+    collection, addDoc, getDocs, deleteDoc, doc, updateDoc,
+    persistentLocalCache, persistentMultipleTabManager,  // ← 任意（ローカルキャッシュ）
+    setLogLevel                                             // ← 任意（ログ抑制）
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-  import {
-    getAuth, onAuthStateChanged
-  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyB4e1nm-ZktpfSMPVW-umIiw6WQmxs0sqg",
@@ -71,8 +72,17 @@
 
   const app = initializeApp(firebaseConfig);
 
-  // Firestore を window に公開（既存コード依存のため）
-  const db = getFirestore(app);
+  // ▼ Firestore 初期化（長ポーリング固定 + Fetch Streams 無効）
+  const db = initializeFirestore(app, {
+    // 任意：永続キャッシュ（複数タブ対応）
+    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+    experimentalForceLongPolling: true,
+    useFetchStreams: false
+  });
+  // 任意：Fire* のデバッグログを抑制
+  setLogLevel?.("error");
+
+  // 既存コード互換のため window に公開
   window.db = db;
   window.collection = collection;
   window.addDoc = addDoc;
@@ -81,15 +91,15 @@
   window.doc = doc;
   window.updateDoc = updateDoc;
 
-  // Auth 初期化（匿名ログインは行わない）
   const auth = getAuth(app);
-
-  // 認証状態は 1 本だけで監視し、window.currentUser に反映
   onAuthStateChanged(auth, (user) => {
     window.currentUser = user || null;
     console.log("Auth:", user ? { uid: user.uid, isAnonymous: !!user.isAnonymous } : "signed out");
   });
 </script>
+
+
+
 
 </head>
 <body>
