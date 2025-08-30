@@ -8,6 +8,14 @@ document.addEventListener("DOMContentLoaded", () => {
   let currentIndex = 0;
   let editingEntryId = null;
   let editingEntryUid = null;
+// --- 過去リストのページング ---
+const PAST_PAGE_SIZE = 10;    // 最初は10件
+let pastVisibleCount = PAST_PAGE_SIZE;
+let pastLoadMoreBtn = null;   // ボタン参照
+// --- 自動読み込み用 ---
+let pastObserver = null;
+let pastSentinel = null;
+let pastAutoloadLock = false;
 
   // --- プロフィール取得キャッシュ（uid → {iconUrl}） ---
   const profileCache = new Map();
@@ -151,38 +159,75 @@ function formatDate(iso) {
   function convertNewlinesToBr(text) {
     return text.replace(/\n/g, "<br>");
   }
+// URLの ?q= を初期表示に適用（存在する時だけ）
+function applyQueryFromURL() {
+  const raw = (new URLSearchParams(location.search).get("q") || "").trim();
+  if (!raw) return; // q が無ければ何もしない
 
-  function createExpandableContent(text) {
+  // 検索欄へ反映
+  const input = document.getElementById("searchInput");
+  if (input) input.value = raw.toLowerCase();
+
+  // フィルタを適用
+  const keyword = raw.toLowerCase();
+  filteredData = diaryData.filter(e =>
+    (e.title   || "").toLowerCase().includes(keyword) ||
+    (e.content || "").toLowerCase().includes(keyword) ||
+    (Array.isArray(e.tags) ? e.tags.join(",") : String(e.tags || "")).toLowerCase().includes(keyword)
+  );
+  currentIndex = 0;
+  displayEntry();
+}
+
+  function createExpandableContent(text, maxLines = 5) {
   const wrapper = document.createElement("div");
   wrapper.className = "expandable-content";
 
+  // 本文（最初は折りたたみ状態で描画）
   const p = document.createElement("p");
+  p.className = "entry-content collapsed";
+  p.style.setProperty("--line-clamp", String(maxLines)); // CSS変数があれば利用、無ければ無視されてもOK
   p.innerHTML = convertNewlinesToBr(text);
+
+  // 「続きを読む」ボタン（必要時のみ表示するため最初は隠す）
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "readmore-btn btn-paper is-ghost";
+  btn.textContent = "続きを読む";
+  btn.hidden = true;
+
+  // トグル
+  let expanded = false;
+  btn.addEventListener("click", () => {
+    expanded = !expanded;
+    if (expanded) {
+      p.classList.remove("collapsed");
+      btn.textContent = "閉じる";
+    } else {
+      p.classList.add("collapsed");
+      btn.textContent = "続きを読む";
+    }
+  });
+
   wrapper.appendChild(p);
+  wrapper.appendChild(btn);
 
-  // ボタン出すか？（文字数 or 改行でざっくり判定）
-  const lineBreaks = (text.match(/\n/g) || []).length;
-  const needsClamp = text.length > 100 || lineBreaks >= 4;
+  // 描画後に「本当に5行を超えて見切れているか」を実測してボタンの要否を決める
+  requestAnimationFrame(() => {
+    const isClamped = p.scrollHeight > p.clientHeight + 1; // +1は誤差吸収
+    if (isClamped) {
+      // 5行超でクランプが効いている → ボタンを表示
+      btn.hidden = false;
+    } else {
+      // 5行以内 → クランプ不要。ボタン撤去＆全文表示
+      p.classList.remove("collapsed");
+      btn.remove();
+    }
+  });
 
-  if (needsClamp) {
-    p.classList.add("collapsed");  // ← このときだけ付ける
-
-    const btn = document.createElement("button");
-    btn.className = "readmore-btn btn-paper is-ghost";
-    btn.textContent = "続きを読む";
-    btn.addEventListener("click", () => {
-      if (p.classList.contains("collapsed")) {
-        p.classList.remove("collapsed");
-        btn.textContent = "閉じる";
-      } else {
-        p.classList.add("collapsed");
-        btn.textContent = "続きを読む";
-      }
-    });
-    wrapper.appendChild(btn);
-  }
   return wrapper;
 }
+
 
 
   // --- メイン描画 ---
@@ -348,65 +393,7 @@ entryHTML.appendChild(byline);
     renderPastList();
 
   }
-// ── 前へ／次へ ナビゲーション
-const prevBtn = document.getElementById("prevBtn");
-const nextBtn = document.getElementById("nextBtn");
 
-function updateNavButtonsDisabled() {
-  if (prevBtn) prevBtn.disabled = (currentIndex <= 0);
-  if (nextBtn) nextBtn.disabled = (currentIndex >= filteredData.length - 1);
-}
-function applyQueryFromURL() {
-  const params = new URLSearchParams(location.search);
-
-  // ← 入力欄に入れる用は raw（元の文字）
-  const raw = (params.get("q") || "").trim();
-  if (!raw) return;
-
-  // ← フィルタ用は小文字化して使う
-  const q = raw.toLowerCase();
-
-  // ここで確実に検索欄へ表示させる
-  const input = document.getElementById("searchInput");
-  if (input) input.value = raw;
-
-  // 既存の検索ロジックと同条件でフィルタ
-  filteredData = diaryData.filter(e =>
-    (e.title || "").toLowerCase().includes(q) ||
-    (e.content || "").toLowerCase().includes(q) ||
-    (Array.isArray(e.tags) ? e.tags.join(",") : String(e.tags || ""))
-      .toLowerCase()
-      .includes(q)
-  );
-
-  currentIndex = 0;
-  displayEntry();
-  {
-  const _el = document.getElementById("searchInput");
-  if (_el) {
-    _el.value = (new URLSearchParams(location.search).get("q") || "").trim();
-  }
-}
-
-}
-
-
-prevBtn?.addEventListener("click", () => {
-  if (currentIndex > 0) {
-    currentIndex--;
-    displayEntry();
-    updateNavButtonsDisabled();
-  }
-});
-
-nextBtn?.addEventListener("click", () => {
-  if (currentIndex < filteredData.length - 1) {
-    currentIndex++;
-    displayEntry();
-    updateNavButtonsDisabled();
-
-  }
-});
 
   // コメント読み込み
   async function loadComments(entryId) {
@@ -420,31 +407,68 @@ nextBtn?.addEventListener("click", () => {
       ? comments.map(c => `<p>🗨 <strong>${c.name}</strong>：${c.text} <small>（${formatDate(c.date)}）</small></p>`).join("")
       : "<p>コメントはまだありません</p>";
   }
-// ▼ 過去投稿（縦リスト）を描画：いま表示中の投稿は除外
+  // ▼ 「もっと読み込む」ボタン（なければ生成／あれば再利用）
+function ensurePastAutoLoad(totalCount) {
+  const parent = document.getElementById("lumina-past-grid");
+  if (!parent) return;
+
+  const oldBtn = document.getElementById("pastLoadMoreBtn");
+  if (oldBtn) oldBtn.remove();
+
+  if (!pastSentinel) {
+    pastSentinel = document.createElement("div");
+    pastSentinel.id = "pastSentinel";
+    pastSentinel.style.cssText = "height:1px;";
+    parent.appendChild(pastSentinel);
+  } else if (pastSentinel.parentElement !== parent) {
+    parent.appendChild(pastSentinel);
+  }
+
+  if (pastObserver) pastObserver.disconnect();
+
+  pastObserver = new IntersectionObserver((entries) => {
+    if (!entries[0].isIntersecting) return;
+    if (pastAutoloadLock) return;
+    pastAutoloadLock = true;
+
+    const remaining = Math.max(0, totalCount - pastVisibleCount);
+    if (remaining > 0) {
+      pastVisibleCount += PAST_PAGE_SIZE;
+      renderPastList();
+    } else {
+      pastObserver.disconnect();
+    }
+    setTimeout(() => (pastAutoloadLock = false), 150);
+  }, { root: null, rootMargin: "0px 0px 240px 0px", threshold: 0 });
+
+  pastObserver.observe(pastSentinel);
+}
+
+
+// ▼ 過去投稿（縦リスト）：いま表示中の投稿を除外、全文で描画、10件ずつ
 function renderPastList() {
   const container = document.getElementById("lumina-past-grid");
   if (!container) return;
   container.innerHTML = "";
 
-  // 表示中を除外して、残りを新しい順に並べる
   const current = filteredData[currentIndex]?.id || null;
-  const list = filteredData
-    .filter(e => e.id !== current)   // 今の1件は除外
-    .slice();                        // 複製（必要ならここで昇順/降順に並べ替え）
+  const all = filteredData.filter(e => e.id !== current);
+  const visible = all.slice(0, pastVisibleCount);
 
-  list.forEach(entry => {
+  visible.forEach(entry => {
     const card = document.createElement("article");
     card.className = "diary-entry";
-card.dataset.entryId = entry.id || "";
-
-    // ← サムネ風のDOM組み立てと click ハンドラは削除し、常時フル描画に
-fillCardFull(card, entry);
-
-
-
+    card.dataset.entryId = entry.id || "";
+    fillCardFull(card, entry);
     container.appendChild(card);
   });
+
+  // スクロール到達で自動追加
+  ensurePastAutoLoad(all.length);
 }
+
+
+
 
 // ▼ 抜粋表示（カード内）
 function fillCardExcerpt(card, entry) {
@@ -738,7 +762,7 @@ document.querySelector(".header-logo")?.addEventListener("click", async () => {
   currentIndex = 0;              // 先頭（最新）へ
 
   displayEntry();
-  updateNavButtonsDisabled?.();
+  
 
   
 
@@ -1027,20 +1051,21 @@ displayEntry();
   // 初期ロード
 (async () => {
   await loadEntries();
-  // ★ 追加：通常表示の初期状態を全件にする
-filteredData = [...diaryData];
-currentIndex = 0;
+  filteredData = [...diaryData];
+  currentIndex = 0;
 
-  // URLパラメータ ?q= があれば、初期表示に検索を適用
-  applyQueryFromURL();
-
-  // q が無いときだけ従来の初期表示を行う
-  if (!new URLSearchParams(location.search).get("q")) {
+  const hasQ = !!new URLSearchParams(location.search).get("q");
+  if (hasQ) {
+    // ★ URL直リンク検索を適用
+    applyQueryFromURL();
+  } else {
+    // 通常の初期表示
     displayEntry();
   }
 
   window.initThumbAutoSlide?.();
 })();
+
 
 });
  // DOMContentLoaded ここまで
@@ -1248,3 +1273,75 @@ document.addEventListener("input", (e) => {
   }
   autoFillName(window.currentUser || null);
 });
+// ==========================
+// ダミー投稿一括投入（暫定ユーティリティ）
+// ==========================
+async function seedDummyEntries(count = 8) {
+  const uid = window.currentUser?.uid;
+  if (!uid) {
+    alert("先にログインしてから実行してね（匿名でもOK）");
+    return;
+  }
+
+  const iconPool = [
+    "image/avatars/1.png",
+    "image/avatars/2.png",
+    "image/avatars/3.png",
+    "image/avatars/4.png",
+    "image/avatars/5.png",
+    "image/avatars/6.png",
+  ];
+  const names = ["ゆら", "ソラ", "ミナ", "レイ", "ハル", "アオ", "ナギ", "ヒカリ"];
+  const sampleTitles = [
+    "朝の空気、新しい一歩",
+    "コーヒー一杯ぶんの余白",
+    "窓辺でひと休み",
+    "小雨の音が心地いい",
+    "メモに残した小さな発見",
+    "スニーカーが語る距離",
+    "夕焼けの帰り道",
+    "はじまりのページ"
+  ];
+  const sampleBodies = [
+    "思ってたより世界は近い。手のひらの体温で少しやわらぐ。",
+    "浅煎りの香り。深呼吸して今日の再起動。",
+    "答えはまだ分からないけど、探すのはちょっと楽しい。",
+    "静かな音が背中を押す。少しだけ前に。",
+    "忘れないうちに書き留めた。小さなきっかけが、大きな分岐に。",
+    "歩いた距離だけ、少しだけやさしくなれた気がする。",
+    "色が溶けていく時間、言葉は少なくていい。",
+    "一行目は怖い。だけど書き始めたら、続きは意外と出てくる。"
+  ];
+
+  const colRef = window.collection(window.db, "diaries");
+
+  let created = 0;
+  for (let i = 0; i < count; i++) {
+    const iconUrl = iconPool[i % iconPool.length];
+    const authorName = names[i % names.length];
+
+    const entry = {
+      uid,
+      authorName,
+      title: sampleTitles[i % sampleTitles.length],
+      content: sampleBodies[i % sampleBodies.length],
+      tags: "dummy",
+      imageUrl: null,
+      likes: 0,
+      iconUrl,
+      createdAt: serverTimestamp() // ← ここを修正
+    };
+
+    try {
+      await window.addDoc(colRef, entry);
+      created++;
+    } catch (e) {
+      console.error("ダミー投入エラー:", e);
+    }
+  }
+
+  alert(`ダミー投稿を ${created} 件追加しました`);
+}
+
+// コンソールから呼べるように
+window.seedDummyEntries = seedDummyEntries;
