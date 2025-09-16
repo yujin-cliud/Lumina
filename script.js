@@ -40,6 +40,87 @@ let pastAutoloadLock = false;
     await setDoc(ref, { iconUrl }, { merge: true });
     profileCache.set(uid, { iconUrl });
   }
+// ===== 通知設定：プロフィール読込/保存ユーティリティ =====
+async function loadNotifySettings(uid) {
+  if (!uid) return {
+    commentOnMyPost: true, replyToMyComment: true, mention: true, likeOnMyPost: false
+  };
+  try {
+    const ref = window.doc(window.db, "profiles", uid);
+    const snap = await getDoc(ref);
+    const data = snap.exists() ? snap.data() : {};
+    return (data.notify) || {
+      commentOnMyPost: true, replyToMyComment: true, mention: true, likeOnMyPost: false
+    };
+  } catch {
+    return { commentOnMyPost: true, replyToMyComment: true, mention: true, likeOnMyPost: false };
+  }
+}
+
+async function saveNotifySettings(uid, notify) {
+  if (!uid) return;
+  const ref = window.doc(window.db, "profiles", uid);
+  await setDoc(ref, { notify }, { merge: true });
+}
+
+// ===== 通知UIの開閉 =====
+const bell = document.getElementById("iconBell");
+const badge = document.getElementById("notifBadge");
+const notifModal = document.getElementById("notif-modal");
+
+bell?.addEventListener("click", async () => {
+  // ログイン必須：未ログインなら案内（あなたのUI方針に合わせて文言調整OK）
+  if (!window.currentUser?.uid) {
+    alert("通知を使うにはログインが必要です。投稿フォームの案内からログインしてください。");
+    return;
+  }
+  // チェックボックスへ現在値を反映
+  const n = await loadNotifySettings(window.currentUser.uid);
+  document.getElementById("notifyCommentOnMyPost").checked = !!n.commentOnMyPost;
+  document.getElementById("notifyReplyToMyComment").checked = !!n.replyToMyComment;
+  document.getElementById("notifyMention").checked = !!n.mention;
+  document.getElementById("notifyLikeOnMyPost").checked = !!n.likeOnMyPost;
+
+  notifModal.classList.add("active");
+});
+
+document.getElementById("notifCancelBtn")?.addEventListener("click", () => {
+  notifModal.classList.remove("active");
+});
+
+// ===== 設定保存 =====
+document.getElementById("notifSaveBtn")?.addEventListener("click", async () => {
+  try {
+    const uid = window.currentUser?.uid;
+    if (!uid) return;
+
+    const notify = {
+      commentOnMyPost: document.getElementById("notifyCommentOnMyPost").checked,
+      replyToMyComment: document.getElementById("notifyReplyToMyComment").checked,
+      mention: document.getElementById("notifyMention").checked,
+      likeOnMyPost: document.getElementById("notifyLikeOnMyPost").checked
+    };
+    await saveNotifySettings(uid, notify);
+    notifModal.classList.remove("active");
+    alert("通知設定を保存しました！");
+  } catch (e) {
+    console.error(e);
+    alert("保存に失敗しました。通信環境をご確認ください。");
+  }
+});
+
+// =====（任意）バッジの初期値：今は0扱いで非表示 =====
+function setBadge(count) {
+  if (!badge) return;
+  if (count > 0) {
+    badge.style.display = "inline-flex";
+    badge.textContent = String(count);
+  } else {
+    badge.style.display = "none";
+    badge.textContent = "";
+  }
+}
+setBadge(0); // 次回、通知箱を作ったらonSnapshotで更新する
 
   let selectedIcon = null;
   // --- 追加：投稿用に選択中アイコンURLを取得（未選択時はデフォルト） ---
@@ -307,10 +388,15 @@ entryHTML.appendChild(byline);
 
     const likeBtn = document.createElement("button");
     likeBtn.type = "button";
-    likeBtn.className = "likeBtn btn-paper is-ghost";
+    likeBtn.className ="likeBtn iconBtn";
     likeBtn.dataset.entryId = entry.id;
     likeBtn.setAttribute("aria-pressed", String(isLiked));
-    likeBtn.textContent = isLiked ? "💛 お気に入り済み" : "💛 お気に入り";
+    likeBtn.innerHTML = `<img src="image/${isLiked ? "お気に入り済み.svg" : "お気に入り.svg"}"
+  alt="${isLiked ? "お気に入り済み" : "お気に入り"}" class="favSvg">`;
+likeBtn.setAttribute("aria-label", isLiked ? "お気に入り済み" : "お気に入り");
+
+
+
 
     const likeCount = document.createElement("span");
     likeCount.className = "likeCount";
@@ -396,7 +482,7 @@ entryHTML.appendChild(byline);
 
 
   // コメント読み込み
-  async function loadComments(entryId) {
+    async function loadComments(entryId) {
     const list = document.getElementById("comment-list");
     list.innerHTML = "読み込み中…";
     const ref = window.collection(window.db, "diaries", entryId, "comments");
@@ -404,9 +490,21 @@ entryHTML.appendChild(byline);
     const comments = [];
     snap.forEach(d => comments.push(d.data()));
     list.innerHTML = comments.length
-      ? comments.map(c => `<p>🗨 <strong>${c.name}</strong>：${c.text} <small>（${formatDate(c.date)}）</small></p>`).join("")
+      ? comments.map(c => {
+          let d = "";
+          if (c.date && typeof c.date.toDate === "function") {
+            const t = c.date.toDate();
+            d = `${t.getFullYear()}/${String(t.getMonth()+1).padStart(2,"0")}/${String(t.getDate()).padStart(2,"0")} `
+              + `${String(t.getHours()).padStart(2,"0")}:${String(t.getMinutes()).padStart(2,"0")}`;
+          } else if (typeof c.date === "string") {
+            // 旧データ（string）互換
+            d = new Date(c.date).toLocaleString();
+          }
+          return `<p>🗨 <strong>${c.name}</strong>：${c.text} <small>（${d}）</small></p>`;
+        }).join("")
       : "<p>コメントはまだありません</p>";
   }
+
   // ▼ 「もっと読み込む」ボタン（なければ生成／あれば再利用）
 function ensurePastAutoLoad(totalCount) {
   const parent = document.getElementById("lumina-past-grid");
@@ -564,10 +662,15 @@ card.appendChild(byline);
 
   const likeBtn = document.createElement("button");
   likeBtn.type = "button";
-  likeBtn.className = "likeBtn btn-paper is-ghost";
+  likeBtn.className = "likeBtn iconBtn";
   likeBtn.dataset.entryId = entry.id;
   likeBtn.setAttribute("aria-pressed", String(isLiked));
-  likeBtn.textContent = isLiked ? "💛 お気に入り済み" : "💛 お気に入り";
+  likeBtn.innerHTML = `<img src="image/${isLiked ? "お気に入り済み.svg" : "お気に入り.svg"}"
+  alt="${isLiked ? "お気に入り済み" : "お気に入り"}" class="favSvg">`;
+likeBtn.setAttribute("aria-label", isLiked ? "お気に入り済み" : "お気に入り");
+
+
+
 
   const likeCount = document.createElement("span");
   likeCount.className = "likeCount";
@@ -886,7 +989,11 @@ displayEntry();
 
     // 楽観的UI
     btn.setAttribute("aria-pressed", String(!wasLiked));
-    btn.textContent = !wasLiked ? "💛 お気に入り済み" : "💛 お気に入り";
+    btn.innerHTML = `<img src="image/${!wasLiked ? "お気に入り済み.svg" : "お気に入り.svg"}"
+  alt="${!wasLiked ? "お気に入り済み" : "お気に入り"}" class="favSvg">`;
+btn.setAttribute("aria-label", !wasLiked ? "お気に入り済み" : "お気に入り");
+
+
     if (countEl) {
       const prev = parseInt(countEl.textContent || "0", 10);
       countEl.textContent = String(Math.max(0, prev + delta));
@@ -902,7 +1009,11 @@ displayEntry();
       console.error("likes update failed:", err);
       // ロールバック
       btn.setAttribute("aria-pressed", String(wasLiked));
-      btn.textContent = wasLiked ? "💛 お気に入り済み" : "💛 お気に入り";
+      btn.innerHTML = `<img src="image/${wasLiked ? "お気に入り済み.svg" : "お気に入り.svg"}"
+  alt="${wasLiked ? "お気に入り済み" : "お気に入り"}" class="favSvg">`;
+btn.setAttribute("aria-label", wasLiked ? "お気に入り済み" : "お気に入り");
+
+
       if (countEl) {
         const now = parseInt(countEl.textContent || "0", 10);
         countEl.textContent = String(Math.max(0, now - delta));
@@ -1001,13 +1112,13 @@ displayEntry();
     this.style.height = this.scrollHeight + "px";
   });
 
-  document.getElementById("comment-submit")?.addEventListener("click", async () => {
+    document.getElementById("comment-submit")?.addEventListener("click", async () => {
     const name = document.getElementById("comment-name").value.trim() || "匿名さん";
     const text = document.getElementById("comment-text").value.trim();
     const postId = document.getElementById("comment-modal").dataset.postId;
     if (!text) return alert("コメントを入力してな！");
 
-    const comment = { name, text, date: new Date().toISOString() };
+    const comment = { name, text, date: serverTimestamp() };
 
     try {
       const ref = window.collection(window.db, "diaries", postId, "comments");
@@ -1044,6 +1155,7 @@ displayEntry();
       alert("コメントの保存に失敗したで…");
     }
   });
+
 
   // 🔸 レトロ紙ボタンをコメント送信に“確実に”適用（ここが今回の追記）
   document.getElementById("comment-submit")?.classList.add("btn-paper", "is-primary");
@@ -1128,42 +1240,64 @@ import {
 
 const auth = getAuth();
 const provider = new GoogleAuthProvider();
+function updateAuthButtonsUI(user) {
+  const { loginBtn, logoutBtn, headerLoginBtn, headerLogoutBtn } = getAuthButtons();
+  const isLoggedIn = !!user && !user.isAnonymous;
+
+  // フォーム内
+  if (loginBtn)  loginBtn.classList.toggle("is-hidden", isLoggedIn);
+  if (logoutBtn) logoutBtn.classList.toggle("is-hidden", !isLoggedIn);
+
+  // ヘッダー
+  if (headerLoginBtn)  headerLoginBtn.classList.toggle("is-hidden", isLoggedIn);
+  if (headerLogoutBtn) headerLogoutBtn.classList.toggle("is-hidden", !isLoggedIn);
+}
 
 // ★ ボタンの参照は毎回安全に取り直す
 function getAuthButtons() {
   return {
+    // 既存（フォーム内）
     loginBtn:  document.getElementById("loginBtn"),
     logoutBtn: document.getElementById("logoutBtn"),
+    // 追加（ヘッダー用）
+    headerLoginBtn:  document.getElementById("headerLoginBtn"),
+    headerLogoutBtn: document.getElementById("headerLogoutBtn"),
   };
 }
 
-// ★ クリックを結び直す（DOMが出来てから）
+
 function bindAuthButtonEvents() {
-   const { loginBtn, logoutBtn } = getAuthButtons();
-   if (loginBtn) {
-     loginBtn.onclick = null;
-     loginBtn.onclick = async () => {
-       try {
-         const res = await signInWithPopup(auth, provider);
-         console.log("Googleログイン成功:", { uid: res.user.uid, email: res.user.email });
-       } catch (e) {
-         console.error("Googleログイン失敗:", e);
-         if (e && e.code === "auth/popup-blocked") {
-           const { signInWithRedirect } =
-             await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
-           await signInWithRedirect(auth, provider);
-         }
-       }
-     };
-   }
-   if (logoutBtn) {
-     logoutBtn.onclick = null;
-     logoutBtn.onclick = async () => {
-       try { await signOut(auth); console.log("ログアウトしました"); }
-       catch (e) { console.error("ログアウト失敗:", e); }
-     };
-   }
- }
+  const { loginBtn, logoutBtn, headerLoginBtn, headerLogoutBtn } = getAuthButtons();
+
+  // ログイン（フォーム&ヘッダー）
+  [loginBtn, headerLoginBtn].forEach(btn => {
+    if (!btn) return;
+    btn.onclick = null;
+    btn.onclick = async () => {
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (e) {
+        console.error("Googleログイン失敗:", e);
+        if (e && e.code === "auth/popup-blocked") {
+          const { signInWithRedirect } =
+            await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
+          await signInWithRedirect(auth, provider);
+        }
+      }
+    };
+  });
+
+  // ログアウト（フォーム&ヘッダー）
+  [logoutBtn, headerLogoutBtn].forEach(btn => {
+    if (!btn) return;
+    btn.onclick = null;
+    btn.onclick = async () => {
+      try { await signOut(auth); }
+      catch (e) { console.error("ログアウト失敗:", e); }
+    };
+  });
+}
+
 // ★ ページ読み込み時に必ず結び直す
 document.addEventListener("DOMContentLoaded", bindAuthButtonEvents);
 // すでにDOMが出来ているケースにも対応
@@ -1185,16 +1319,25 @@ function applyAuthUIToForm(user) {
   }
 }
 
-// 認証状態が変わったらUI反映（既存の onAuthStateChanged に追記でもOK）
+
+// 統合版（ここだけ残す）
 onAuthStateChanged(auth, (user) => {
   window.currentUser = user || null;
-  applyAuthUIToForm(user);
 
-  // 既存のボタン表示切替（あれば）も安全に
-  const { loginBtn, logoutBtn } = getAuthButtons();
-  if (loginBtn)  loginBtn.style.display  = user ? "none" : "inline-block";
-  if (logoutBtn) logoutBtn.style.display = user ? "inline-block" : "none";
+  // 既存のUI更新をここに集約
+  applyAuthUIToForm(user);
+  updateAuthButtonsUI(user);
+  autoFillName(user);
+
+  // ログもここだけ
+  console.log(
+    "Auth:",
+    user ? "signed in" : "signed out",
+    { uid: user?.uid ?? null, isAnonymous: user?.isAnonymous ?? null, email: user?.email ?? null }
+  );
 });
+
+
 
 // 初回反映（DOM用意後）
 document.addEventListener("DOMContentLoaded", () => {
@@ -1203,33 +1346,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ★ 状態に応じてボタンの表示を切替
-onAuthStateChanged(auth, (user) => {
-  const { loginBtn, logoutBtn } = getAuthButtons();
-  const isLoggedIn = !!user && !user.isAnonymous;
 
-  if (loginBtn)  loginBtn.style.display  = isLoggedIn ? "none"        : "inline-block";
-  if (logoutBtn) logoutBtn.style.display = isLoggedIn ? "inline-block" : "none";
-
-  console.log("Auth state:", { uid: user?.uid ?? null, isAnonymous: user?.isAnonymous ?? null });
-autoFillName(user);
-});
-
-
-// ② この下に既存の「安全版 認証状態ログ」IIFEがある
-(async () => {
-  while (!window.db) {
-    await new Promise(r => setTimeout(r, 50));
-  }
-  onAuthStateChanged(auth, (user) => {
-    console.log("=== 本番の認証状態 ===", {
-      uid: user?.uid,
-      isAnonymous: user?.isAnonymous,
-      email: user?.email || null,
-    });
-    window.__auth = user;
-    window.currentUser = user;
-  });
-})();
 
 // ===== 名前のオートフィル & ローカル保存（Step 1）=====
 const LUMINA_NAME_KEY = "luminaName";
@@ -1345,3 +1462,160 @@ async function seedDummyEntries(count = 8) {
 
 // コンソールから呼べるように
 window.seedDummyEntries = seedDummyEntries;
+
+// ====== Likeボタン 再バインド・二重発火ガード（後付け版 / no <script> tags） ======
+(function(){
+  // --- Safari古め対策：Element.prototype.replaceWith が無い場合のフォールバック ---
+  if (!Element.prototype.replaceWith) {
+    Element.prototype.replaceWith = function() {
+      const parent = this.parentNode;
+      if (!parent) return;
+      const args = Array.prototype.slice.call(arguments);
+      for (let i = 0; i < args.length; i++) {
+        const node = args[i] instanceof Node
+          ? args[i]
+          : document.createTextNode(String(args[i]));
+        if (i === 0) {
+          parent.replaceChild(node, this);
+        } else {
+          parent.insertBefore(node, this.nextSibling);
+        }
+      }
+    };
+  }
+
+  // ▼ ユーティリティ
+  const $ = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
+  /**
+   * Firestore側の更新呼び出し（あなたの既存関数にブリッジ）
+   * - 既存に toggleLike(docId, liked) 相当があればそれを呼ぶ
+   */
+  async function apiToggleLike(docId, liked) {
+    // 例: 既存の関数名に合わせてここを書き換えてOK
+    if (typeof window.toggleLike === 'function') {
+      return await window.toggleLike(docId, liked);
+    }
+    if (window.likeApi && typeof window.likeApi.toggle === 'function') {
+      return await window.likeApi.toggle(docId, liked);
+    }
+    // 何もなければ成功扱い（UI検証用）
+    return Promise.resolve({ ok: true });
+  }
+
+  // ファイル先頭か即時関数の外で定数を定義してもOK
+const LIKE_ICON_UNLIKED = 'image/お気に入り.svg';
+const LIKE_ICON_LIKED   = 'image/お気に入り済み.svg';
+
+// UI反映（楽観更新/ロールバック共通）
+function applyLikeUI(btn, liked){
+  // カウント更新
+  const countEl =
+    btn.closest('.entry-meta-actions, .entry-actions, .diary-entry')
+    ?.querySelector('.likeCount');
+  if (countEl) {
+    const now = parseInt(countEl.textContent || '0', 10) || 0;
+    countEl.textContent = String(liked ? now + 1 : Math.max(0, now - 1));
+  }
+
+  // ボタン状態（aria とクラス）
+  btn.classList.toggle('is-liked', liked);
+  btn.setAttribute('aria-pressed', liked ? 'true' : 'false');
+
+  // ▼ アイコン差し替え（imgタグの場合）
+  const iconImg = btn.querySelector('img.favSvg, img');
+  if (iconImg) {
+    iconImg.src = liked ? LIKE_ICON_LIKED : LIKE_ICON_UNLIKED;
+    iconImg.alt = liked ? 'お気に入り済み' : 'お気に入り';
+    return;
+  }
+
+  // ▼ SVGの場合はクラス切り替え
+  const svg = btn.querySelector('.favSvg, svg');
+  if (svg) svg.classList.toggle('is-liked', liked);
+}
+
+
+  // 既存の click/touch リスナーを**完全除去**してから pointerup を付け直す
+  function rebindLikeButton(oldBtn){
+    if (!(oldBtn instanceof HTMLElement)) return oldBtn;
+    if (oldBtn.dataset.rebound === '1') return oldBtn;
+
+    // クローン置換で既存リスナーを丸ごと剥がす
+    const btn = oldBtn.cloneNode(true);
+    oldBtn.replaceWith(btn);
+    btn.dataset.rebound = '1';
+
+    // 初期状態の推定
+    let liked =
+      btn.classList.contains('is-liked') ||
+      btn.getAttribute('aria-pressed') === 'true';
+    btn.setAttribute('aria-pressed', liked ? 'true' : 'false');
+
+    // 連打ロック
+    let lock = false;
+
+    // 余計な click をキャプチャで潰す（保険）
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      e.stopPropagation();
+      return false;
+    }, true);
+
+    // pointerup 一本化
+    btn.addEventListener('pointerup', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (lock) return;
+      lock = true;
+
+      const docId = btn.dataset.docid || btn.getAttribute('data-id') || null;
+
+      // --- 楽観的UI更新 ---
+      const prevLiked = liked;
+      liked = !liked;
+      applyLikeUI(btn, liked);
+
+      try {
+        await apiToggleLike(docId, liked); // Firestore 反映
+      } catch (err) {
+        console.error('toggleLike failed:', err);
+        // 失敗 → ロールバック
+        liked = prevLiked;
+        applyLikeUI(btn, liked);
+      } finally {
+        setTimeout(() => { lock = false; }, 300); // 連打吸収
+      }
+    }, { passive: false });
+
+    // iOSゴーストタップ対策（最終保険）
+    btn.style.touchAction = 'manipulation';
+
+    return btn;
+  }
+
+  function bindAllLikeButtons(){
+    $$('.likeBtn').forEach(rebindLikeButton);
+  }
+
+  // 初期化
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindAllLikeButtons);
+  } else {
+    bindAllLikeButtons();
+  }
+
+  // 動的追加に追従
+  const mo = new MutationObserver((muts)=>{
+    for (const m of muts) {
+      m.addedNodes.forEach(node=>{
+        if (!(node instanceof HTMLElement)) return;
+        if (node.matches && node.matches('.likeBtn')) rebindLikeButton(node);
+        if (node.querySelectorAll) node.querySelectorAll('.likeBtn').forEach(rebindLikeButton);
+      });
+    }
+  });
+  mo.observe(document.body, { childList: true, subtree: true });
+})();

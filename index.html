@@ -135,15 +135,27 @@
 <header class="app-header">
   <div class="header-container">
     <img src="image/logo.svg" alt="Lumina" class="header-logo" />
+
     <div class="icon-group">
       <img src="image/icon_post.svg" class="menu-icon" id="iconPost" alt="投稿" />
       <img src="image/icon_tag.svg" class="menu-icon" id="iconTag" alt="タグ検索" />
       <img src="image/icon_favorite.svg" class="menu-icon" id="iconFavorite" alt="お気に入り" />
-    </div>
-  </div>
-  
+<!-- これに置き換え -->
+<img src="image/login.svg"  class="menu-icon" id="headerLoginBtn"  alt="Googleログイン" />
+<img src="image/logout.svg" class="menu-icon is-hidden" id="headerLogoutBtn" alt="ログアウト" />
 
+
+
+      <!-- ベルはラッパーで1セルに収め、バッジを重ねる -->
+      <div class="icon-bell">
+        <img src="image/icon_bell.svg" class="menu-icon" id="iconBell" alt="通知" />
+        <span id="notifBadge" aria-label="未読数" style="display:none;"></span>
+      </div>
+    </div>
+  </div> <!-- /header-container -->
 </header>
+
+
 
 <div class="form-wrapper">
   <div class="form-box">
@@ -206,6 +218,41 @@
 </div>
 
 <script type="module" src="script.js"></script>
+<!-- 通知設定モーダル -->
+<div id="notif-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="notif-title">
+  <div class="modal-content">
+    <h3 id="notif-title" style="margin:0 0 8px 0;">通知設定</h3>
+    <p style="margin:0 0 12px 0; color:#555;">受け取りたい通知を選んでください。</p>
+
+    <div class="notif-grid simple">
+  <label class="notif-row" for="notifyCommentOnMyPost" title="自分の投稿にコメントが付いたら通知">
+    <input type="checkbox" id="notifyCommentOnMyPost" />
+    <span class="notif-text">コメント</span>
+  </label>
+
+  <label class="notif-row" for="notifyReplyToMyComment" title="自分のコメントに返信が付いたら通知">
+    <input type="checkbox" id="notifyReplyToMyComment" />
+    <span class="notif-text">返信</span>
+  </label>
+
+  <label class="notif-row" for="notifyMention" title="本文で @メンションされたら通知">
+    <input type="checkbox" id="notifyMention" />
+    <span class="notif-text">@メンション</span>
+  </label>
+
+  <label class="notif-row" for="notifyLikeOnMyPost" title="自分の投稿に『いいね』が付いたら通知">
+    <input type="checkbox" id="notifyLikeOnMyPost" />
+    <span class="notif-text">いいね</span>
+  </label>
+</div>
+
+
+    <div class="modal-buttons">
+      <button id="notifSaveBtn" class="btn-paper is-primary">保存</button>
+      <button id="notifCancelBtn" class="btn-paper is-ghost">閉じる</button>
+    </div>
+  </div>
+</div>
 
 <!-- コメントモーダル -->
 <div id="comment-modal" class="modal">
