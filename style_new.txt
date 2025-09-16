@@ -770,13 +770,9 @@ button { white-space: nowrap; } /* 長文回避 */
   background: #f3e6c9;   /* トラック（レール）色：紙風 */
 }
 
-/* === サムネ用：スクロールバーのつまみ（thumb） === */
 .thumbnail-bar::-webkit-scrollbar-thumb,
-#lumina-thumb-track::-webkit-scrollbar-thumb {
-  background: #d9c7a3;   /* 紙系の色味 */
-  border-radius: 6px;
-}
-
+#l
+/* 過去投稿カード：タイトルの位置を少し下げる（強制上書き） */
 #lumina-past-grid .diary-entry .entry-title,
 #lumina-past-grid .diary-entry h3 {
   margin-top: 8px !important;   /* 4〜12pxで好み調整OK */
@@ -834,23 +830,13 @@ button { white-space: nowrap; } /* 長文回避 */
   display: inline-block;
 }
 .entry-fav-inline .likeBtn{
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  background: transparent;
-  border: none;
-  box-shadow: none;
-
-  /* ▼iOSの疑似ダブルタップ・ダブル発火を抑止（ここに置いてOK） */
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-
+  width:32px; height:32px; padding:0;
+  background: transparent; border: none; box-shadow: none;
 /* ▼いいねアイコンの状態切り替え（未/済） */
 .likeBtn .favSvg {
   /* 未いいね時：線だけ（塗りなし） */
   fill: none;
-  stroke: #a67c52;
+  stroke: #a67c52;        /* 既存トーンに合わせたブラウン */
   stroke-width: 2px;
   transition: fill .18s ease, stroke .18s ease, transform .12s ease;
 }
@@ -858,7 +844,7 @@ button { white-space: nowrap; } /* 長文回避 */
 /* いいね済み（JSが .is-liked / aria-pressed=true を付与） */
 .likeBtn.is-liked .favSvg,
 .likeBtn[aria-pressed="true"] .favSvg {
-  fill: #e74c3c;
+  fill: #e74c3c;          /* 好みで #f4b23d（ベージュ系）などに変更OK */
   stroke: #e74c3c;
 }
 
@@ -867,14 +853,17 @@ button { white-space: nowrap; } /* 長文回避 */
   transform: scale(1.05);
 }
 
-.entry-fav-inline .likeBtn:focus { outline: none; }
-.entry-fav-inline .likeBtn:focus-visible {
-  outline: 2px solid #d7b98d;
-  outline-offset: 2px;
-  border-radius: 6px;
+  /* ▼iOSの疑似ダブルタップ・ダブル発火を抑止 */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* SVGサイズ */
+.entry-fav-inline .likeBtn:focus { outline: none; }
+.entry-fav-inline .likeBtn:focus-visible {
+  outline: 2px solid #d7b98d; outline-offset: 2px; border-radius: 6px;
+}
+/* SVGサイズ（既存 .likeBtn .favSvg は流用可） */
+/* お気に入りアイコンのサイズ */
 .likeBtn .favSvg{
   width: 20px;
   height: 20px;
@@ -882,7 +871,6 @@ button { white-space: nowrap; } /* 長文回避 */
   pointer-events: none;
   user-select: none;
 }
-
 /* ベル用ラッパー：1セルにアイコン＋バッジを重ねる */
 .icon-bell{
   position: relative;
