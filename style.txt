@@ -1,0 +1,1004 @@
+/* =========================
+   基本設定 & スペーシング
+   ========================= */
+:root{
+  --sp-1: 8px;
+  --sp-2: 16px;
+  --sp-3: 24px;
+  --sp-4: 32px;
+}
+
+body {
+  background-color: #ffffff;
+  color: #2b2b2b;
+  font-family: "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+  margin: 0;
+  padding: 16px;
+}
+
+/* =========================
+   フォーム（投稿）オーバーレイ
+   ========================= */
+.form-wrapper {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.0);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  z-index: 1000;
+  padding: 20px;
+  box-sizing: border-box;
+  transform: translateY(30px); /* 初期位置（少し下） */
+  opacity: 0;                  /* 初期は透明 */
+  transition: transform 0.4s ease-out, opacity 0.4s ease-out;
+}
+.form-wrapper.active {
+  transform: translateY(0); /* 元の位置に */
+  opacity: 1;    
+  pointer-events: auto;           
+}
+
+form input,
+form textarea {
+  width: 100%;
+  padding: 10px;
+  margin: 10px 0;
+  border: 1px solid #a67c52;
+  border-radius: 8px;
+  font-size: 16px;
+  box-sizing: border-box;
+  background-color: #ffffff;
+  color: #333;
+  height: auto;
+  overflow-y: hidden;
+  overflow-x: hidden;
+  resize: none;
+}
+.form-wrapper form {
+  max-width: 400px; /* フォームの最大幅 */
+  width: 100%;      /* 画面幅に応じて縮小 */
+  border-radius: 10px; /* 角丸 */
+  padding: 20px;
+  box-sizing: border-box;
+  margin: 0 auto;
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid #888;
+  background-color: #ffffff;
+  border-radius: 10px;
+
+  /* ▼ 追加：最下段2ボタンを右下横並びにするためのグリッド */
+  display: grid;
+  grid-template-columns: 1fr auto auto; /* 本文は全幅、最後にボタン2列 */
+  gap: 10px 8px;
+  align-items: center;
+}
+/* フォーム内の通常要素は全幅。ボタン2つだけ右下同一行へ配置 */
+.form-wrapper form > *:not(button) { grid-column: 1 / -1; }
+.form-wrapper form > #submitBtn   { grid-column: 2; justify-self: end; }
+.form-wrapper form > #cancelBtn   { grid-column: 3; justify-self: end; }
+
+
+
+.display-toggle { text-align: center; margin-top: 16px; }
+
+/* =========================
+   ヘッダー
+   ========================= */
+.app-header { background-color: #fff; padding: 1px 0;cursor: pointer; }
+.header-container{
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 12px; max-width: 540px; margin: 0 auto;
+}
+.header-logo { width: 150px; height: auto; margin: 0; display: block; }
+/* ヘッダーアイコンを等間隔に並べる */
+.icon-group{
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 40px;
+  column-gap: 16px;
+  align-items: center;
+  justify-content: end;
+  margin-left: auto;
+}
+
+/* ▼スマホ時は間隔を狭くする */
+@media (max-width: 600px) {
+  .icon-group {
+    column-gap: 1px;
+  }
+}
+
+
+
+/* ▼スマホ用ヘッダーロゴ 左端寄せ */
+@media (max-width: 768px) {
+  .header-logo {
+    margin-left: 0;   /* 左余白をゼロに */
+    transform: none;  /* 中央寄せ用の transform があれば解除 */
+    text-align: left; /* 左揃えに */
+    display: block;   /* 念のためブロック要素に */
+  }
+}
+
+
+
+
+/* =========================
+   検索ボックス
+   ========================= */
+.search-wrapper {
+  max-width: 540px;
+  margin: 16px auto;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+#searchInput {
+  flex: 1; padding: 8px; font-size: 16px;
+  border-radius: 8px; border: 1px solid #888;
+}
+
+button { white-space: nowrap; } /* 長文回避 */
+
+/* =========================
+   投稿カード
+   ========================= */
+.diary-entry {
+  max-width: 540px;
+  margin: 20px auto;
+  padding: 20px;
+  border-radius: 12px;
+  background-color: #fff5dc;
+  box-shadow: 0 0 8px rgba(0,0,0,0.1);
+  box-sizing: border-box;
+}
+.entry h3{
+  margin: 0 0 var(--sp-2) 0;
+  line-height: 1.3;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #2b2b2b;
+}
+/* タイトル下の点線 */
+.zigzag-divider {
+  width: 100%;
+  border-bottom: 2px dashed #a67c52; /* ベージュ寄りのブラウンで点線 */
+  margin: 2px 0 16px 0;
+}
+
+
+.expandable-content{
+  margin: 0 0 var(--sp-2) 0;
+  font-size: 1rem; line-height: 1.6; color: #333;
+}
+.expandable-content p.collapsed{
+  display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden;
+}
+.readmore-btn { /* 既存ボタンを紙ボタンに置き換える前提で最小限に */
+  font-size: 12px; margin-top: 4px;
+}
+
+.byline{
+  display: inline-flex; align-items: center;
+  gap: var(--sp-1); margin: 0 0 var(--sp-1) 0;
+  font-size: .85rem; color: #666;
+}
+.byline .avatar{
+  width:28px;
+  height:28px;
+  border-radius:50%;
+  object-fit:cover;
+}
+
+.diary-image { max-width: 100%; border-radius: 12px; margin: 10px 0; }
+
+/* 投稿カード下部の操作 */
+.entry-actions {
+  display: flex; gap: 8px; align-items: center; margin-top: var(--sp-3);
+}
+
+/* =========================
+   お気に入り＆コメント（メタ行）
+   ========================= */
+.entry-meta-actions{
+  display:flex; align-items:center; gap:16px;
+  margin: 6px 0 14px 0;
+}
+.entry-fav-inline,
+.entry-comment-inline{
+  display:inline-flex; align-items:center; gap:6px;
+}
+.likeCount, .commentCount { font-size:.95rem; color:#666; min-width:1.2em; text-align:right; }
+.entry-comment-inline .commentBtn{
+  width:32px; height:32px; padding:0; background:transparent; border:none;
+}
+.commentIcon{ width:20px; height:20px; display:block; pointer-events:none; user-select:none; }
+
+/* =========================
+   サムネイルバー
+   ========================= */
+.thumbnail-bar {
+  display: flex; overflow-x: auto; padding: 10px; margin: 20px auto;
+  gap: 12px; max-width: 700px;
+}
+.thumbnail-item {
+  min-width: 100px; max-width: 120px;
+  background-color: #fffaf0; border: 1px solid #ccc; border-radius: 10px;
+  padding: 6px; font-size: 13px; cursor: pointer; text-align: center;
+}
+.thumbnail-item:hover { background-color: #f5e4c5; }
+.thumbnail-image { width:100%; height:60px; object-fit:cover; border-radius:8px; }
+.thumbnail-text { margin-top: 4px; font-size: 12px; color: #5c3d1c; }
+
+/* =========================
+   付箋タグ（遊び心）
+   ========================= */
+.entry-tags{ display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+.entry-tags .tag{
+  position:relative; display:inline-block;
+  padding:6px 12px; border-radius:6px; background:#fff7d6; color:#3e3427;
+  box-shadow: 2px 3px 6px rgba(0,0,0,.15);
+  font-size:.95rem; line-height:1.2; white-space:nowrap;
+  transition: transform .18s ease, box-shadow .18s ease;
+  cursor: pointer;
+}
+.entry-tags .tag::after{
+  content:""; position:absolute; top:0; right:0; width:0; height:0;
+  border-top:10px solid #f1c252; border-left:10px solid transparent;
+  filter: drop-shadow(-1px 1px 1px rgba(0,0,0,.15));
+}
+.entry-tags .tag:nth-child(6n+1){ transform: rotate(-1.5deg); }
+.entry-tags .tag:nth-child(6n+2){ transform: rotate(.8deg); }
+.entry-tags .tag:nth-child(6n+3){ transform: rotate(-.6deg); }
+.entry-tags .tag:nth-child(6n+4){ transform: rotate(1.2deg); }
+.entry-tags .tag:nth-child(6n+5){ transform: rotate(-.9deg); }
+.entry-tags .tag:nth-child(3n){ background:#fff8dd; }
+.entry-tags .tag:nth-child(3n+1){ background:#fdf2c6; }
+.entry-tags .tag:nth-child(3n+2){ background:#fff6e3; }
+@media (hover:hover){ .entry-tags .tag:hover{ transform: translateY(-3px) rotate(0deg); box-shadow: 4px 6px 10px rgba(0,0,0,.2); } }
+@media (prefers-reduced-motion: reduce){ .entry-tags .tag{ transition:none; transform:none; } }
+@media (max-width: 480px){ .entry-tags{ gap:6px; } .entry-tags .tag{ padding:5px 10px; font-size:.9rem; } }
+
+/* =========================
+   モーダル（コメント/編集兼用）
+   投稿フォームと同じ“下からスッ＋フワッ”、暗幕なし
+   ========================= */
+/* 投稿モーダル(.form-wrapper)と同じ挙動に合わせる */
+.modal{
+  position: fixed; inset: 0;
+  display:flex; justify-content:center; align-items:center;
+  background: transparent;
+  z-index: 9999;
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transform: translateY(30px); /* ← 下からスッ */
+  transition:
+    transform 0.4s ease-out,
+    opacity   0.4s ease-out,
+    visibility 0s linear 0.4s; /* 非表示へ遅延で切替 */
+}
+.modal.active{
+  opacity: 1; visibility: visible; pointer-events: auto;
+  transform: translateY(0);     /* ← 元の位置へ */
+  transition:
+    transform 0.4s ease-out,
+    opacity   0.4s ease-out,
+    visibility 0s;              /* すぐ可視状態に */
+}
+
+
+/* 中身も投稿モーダルと同じ“ふわっ”に時間を統一 */
+.modal-content{
+  width: 90%; max-width: 450px;
+  background-color: #fffef5; color:#2b2b2b;
+  padding: 20px; border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.15);
+  transform: translateY(30px);  /* 30px に統一 */
+  opacity: 0;
+  transition: transform 0.4s ease-out, opacity 0.4s ease-out; /* 0.4s に統一 */
+  position: relative;
+  animation: none;
+}
+.modal.active .modal-content{
+  transform: translateY(0);
+  opacity: 1;
+}
+
+
+/* ※ 既存の @keyframes fadeScaleIn は未使用になるので残っていてもOK */
+
+
+/* 入力系は既存の見た目を踏襲 */
+.modal-content input,
+.modal-content textarea{
+  width:100%; padding:10px; margin-top:10px;
+  border:1.5px solid #a67c52; border-radius:10px;
+  font-size:15px; box-sizing:border-box;
+  background:#fff; color:#333;
+}
+
+/* ボタン類 */
+.modal-buttons{
+  display: flex;
+  justify-content: flex-end;  /* 右寄せ */
+  gap: 8px;                   /* ボタン間の余白 */
+  margin-top: 12px;           /* 本文との間隔 */
+}
+.modal-buttons button{ margin-left: 0; }
+
+
+/* 閉じるボタン */
+.close-button{
+  position:absolute; top:10px; right:15px;
+  width:32px; height:32px; background:#fff;
+  border:2px solid #ccc; border-radius:50%;
+  font-size:20px; font-weight:bold; line-height:1;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer;
+}
+
+
+/* =========================
+   スプラッシュ
+   ========================= */
+#splash-screen{
+  position: fixed; inset:0; z-index: 9999; background-color: #fff5dc;
+  display:flex; align-items:center; justify-content:center;
+  transition: opacity 1s ease;
+}
+.splash-logo{ width:100px; height:100px; opacity:0; animation: fadeIn 1s forwards; }
+@keyframes fadeIn{ from{opacity:0; transform:scale(.9);} to{opacity:1; transform:scale(1);} }
+
+/* =========================
+   レトロ紙ボタン（統一）
+   ========================= */
+.btn-paper{
+  --paper-bg: #fff7df;
+  --paper-edge: #e3caa3;
+  --ink: #4b3f2f;
+  --hover-lift: 2px;
+  --press-depth: 1px;
+
+  appearance: none;
+  border: 0;
+  border-radius: 12px;
+  padding: 8px 14px;
+  font-size: 0.95rem;
+  line-height: 1.1;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255,255,255,.55), rgba(255,255,255,0) 40%),
+    radial-gradient(circle at 70% 80%, rgba(0,0,0,.03), rgba(0,0,0,0) 45%),
+    linear-gradient(#fffdf3, var(--paper-bg));
+  box-shadow:
+    0 2px 4px rgba(0,0,0,.12),
+    inset 0 -2px 0 var(--paper-edge);
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+  user-select: none;
+}
+.btn-paper *{ pointer-events:none; }
+@media (hover:hover){
+  .btn-paper:hover{
+    transform: translateY(calc(-1 * var(--hover-lift)));
+    box-shadow: 0 4px 8px rgba(0,0,0,.16), inset 0 -2px 0 var(--paper-edge);
+    filter: brightness(1.02);
+  }
+}
+.btn-paper:active{
+  transform: translateY(var(--press-depth));
+  box-shadow: 0 1px 2px rgba(0,0,0,.12), inset 0 2px 3px rgba(0,0,0,.08);
+}
+.btn-paper:focus-visible{
+  outline: 3px solid rgba(166,124,82,.35);
+  outline-offset: 2px;
+}
+
+/* バリエーション */
+.btn-paper.is-primary{ --paper-bg:#fff5d2; --paper-edge:#d7b98d; }
+.btn-paper.is-ghost  { --paper-bg:#fffaf0; --paper-edge:#e6d8c0; color:#5c4a1d; }
+.btn-paper.is-danger { --paper-bg:#ffe1dd; --paper-edge:#e3a8a2; color:#7a2b2b; }
+
+/* 既存IDの専用調整（例：コメント送信） */
+#commentSubmitBtn.btn-paper{ width:auto; margin-top:10px; }
+
+/* コメントモーダル：キャンセルの上下余白だけ調整 */
+#cancelCommentBtn.btn-paper{
+  padding-top: 7px;     /* 必要なら 6〜8px で微調整 */
+  padding-bottom: 7px;
+  line-height: 1.1;
+}
+
+
+/* =========================
+   レスポンシブ微調整
+   ========================= */
+@media (max-width: 600px) {
+  body { padding: 10px; }
+  .form-wrapper, .diary-entry { padding: 16px; }
+  .header-logo { width: 40px; opacity:.95; }
+}
+.form-avatar-group {
+  display: flex;
+  gap: 8px; /* アイコン間の余白 */
+  align-items: center; /* 垂直中央揃え */
+  flex-wrap: nowrap; /* 折り返さず一列に表示 */
+}
+
+.form-avatar-group img {
+  width: 40px;  /* アイコンの横幅 */
+  height: 40px; /* アイコンの縦幅 */
+  border-radius: 50%;
+  object-fit: cover;
+}
+/* === 投稿フォームの丸形アイコン（小さく＋横一列）=== */
+.icon-selector label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #555;
+}
+
+.icon-options {
+  display: flex;
+  align-items: center;
+  gap: 8px;         /* アイコン間の余白 */
+  flex-wrap: nowrap;/* 折り返さず一列 */
+  overflow-x: auto; /* 幅が足りなければ横スクロール */
+  padding: 4px 4px;
+}
+
+.profile-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: 0 0 auto;
+  cursor: pointer;
+  display: block;
+  transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+  padding: 3px; /* 余白はこれだけでOK */
+}
+
+/* === 選択中アイコンに枠を付ける === */
+.icon-options input[type="radio"] {
+  display: none; /* ラジオボタン自体は非表示 */
+}
+
+.icon-options input[type="radio"]:checked + .profile-icon {
+  outline: 3px solid #f4b23d; /* 枠の色と太さ */
+  outline-offset: 2px;        /* 枠と画像の間隔 */
+  border-radius: 50%;
+}
+/* クリックで選択中のアイコンに枠を付ける（HTMLにradioが無い版） */
+.profile-icon.is-selected {
+  transform: scale(1.08);                 /* 拡大 */
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.18));
+  border-radius: 50%;
+}
+/* === 投稿フォーム内のスクロールバーを“表示させずに”機能は保つ === */
+.form-wrapper form {
+  overflow: auto;              /* クリップしない（拡大・枠線が見切れない） */
+  max-height: none;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;       /* Firefox: バー非表示 */
+}
+.form-wrapper form::-webkit-scrollbar { /* Chrome/Safari/Edge: バー非表示 */
+  width: 0;
+  height: 0;
+}
+
+
+/* Webkit系（Chrome / Safari / Edge）でスクロールバー非表示 */
+.form-wrapper form::-webkit-scrollbar {
+  display: none;
+}
+
+/* Firefoxでスクロールバー非表示 */
+.form-wrapper form {
+  scrollbar-width: none;
+}
+/* === 投稿フォームを画面中央に固定 === */
+.form-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.form-wrapper form {
+  position: fixed;          /* 固定配置 */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%); /* 完全中央寄せ */
+  margin: 0;                /* 自動マージン無効化 */
+}
+/* === スマホでフォームを正確に中央固定（svh＋safe-area対応） === */
+.form-wrapper{
+  height: 100svh; /* iOSのアドレスバー分を除いた高さ */
+}
+
+.form-wrapper form{
+  position: fixed;
+  top: 12svh;              /* 画面の“見えてる高さ”のちょうど真ん中 */
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+
+  /* 画面からはみ出さない幅・高さ（セーフエリア考慮） */
+  max-width: min(400px, 92vw);
+  width: 92vw;
+  max-height: calc(100svh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px);
+
+  /* 中身はスクロール可能（←バーは非表示にする） */
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;                /* Firefoxでバー非表示 */
+}
+.form-wrapper form::-webkit-scrollbar{ display: none; } /* WebKitでバー非表示 */
+
+/* スマホ時のヘッダーロゴ縮小 */
+@media (max-width: 540px) {
+  .header-logo {
+    width: 150%;  /* 適度なサイズに縮小 */
+  }
+}
+/* ヘッダー右側アイコンのサイズを統一 */
+.menu-icon {
+  width: 40px;
+  height: 40px;
+  display: block;
+  flex-shrink: 0;  /* つぶれ防止 */
+}
+
+/* スマホ時はさらに小さく */
+@media (max-width: 600px) {
+  .menu-icon {
+    width: 30px;
+    height: 30px;
+  }
+  .header-logo {
+    width: 30%; /* 既にある指定を再掲しておくと安心 */
+  }
+}
+/* 投稿・キャンセルボタンの横並び */
+.form-buttons {
+  display: flex;
+  gap: 8px; /* ボタン間の余白 */
+  justify-content: flex-end; /* 右寄せ（中央や左寄せも可） */
+}
+/* 前へ・次へボタンを中央寄せ */
+.nav-buttons {
+  display: flex;
+  justify-content: center; /* 中央寄せ */
+  gap: 8px; /* ボタン間の余白 */
+  margin-top: 16px; /* 必要に応じて調整 */
+}
+/* ── LUMINA: 過去投稿 縦並び表示 ── */
+#lumina-past-grid {
+  max-width: 540px;   /* 横幅はサムネやメインと揃える */
+  margin: 12px auto 32px;
+  padding: 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;          /* カード同士の縦間隔 */
+}
+
+/* カードの見た目は既存の .diary-entry を継承 */
+#lumina-past-grid .diary-entry {
+  max-width: 100%;
+  margin: 0;
+}
+/* ── サムネ帯のスクロール調整（止まり心地UP） ── */
+#lumina-thumb-track {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+#lumina-thumb-track .thumbnail-item {
+  scroll-snap-align: start;
+}
+/* ── Lumina: 3ブロックの幅と余白を完全同期 ── */
+#diary-container,
+#lumina-thumb-strip .thumbnail-bar,
+#lumina-past-grid {
+  max-width: 540px;         /* ← 好みで 680–800px に調整OK（3者共通） */
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+/* サムネ帯の上下間隔をメインと過去投稿で統一 */
+#lumina-thumb-strip { margin: 8px 0 16px; }
+
+/* 過去投稿：縦リストの見た目微調整（高さ揃え＆読みやすさ） */
+#lumina-past-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;                /* カード間の縦間隔 */
+  margin-top: 8px;
+  margin-bottom: 40px;
+}
+
+/* グリッド内で .diary-entry の中央寄せ・固定幅を無効化して等幅に */
+#lumina-past-grid .diary-entry {
+  max-width: 100%;
+  margin: 0;
+  padding: 14px;
+  background: #fffef8;
+  border: 1px solid #e8d9bd;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.08);
+  box-sizing: border-box;
+}
+
+/* タイトル2行・本文3行で綺麗に省略（高さ揃え用のmin-height付き） */
+#lumina-past-grid .entry-title,
+#lumina-past-grid h3 {
+  font-size: 1.05rem;
+  line-height: 1.35;
+  font-weight: 700;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;     /* ← タイトル2行 */
+  overflow: hidden;
+  min-height: calc(1em * 1.35 * 2);
+  margin: 0;
+}
+
+#lumina-past-grid .entry-content,
+#lumina-past-grid .expandable-content {
+  color: #444;
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;     /* ← 本文3行 */
+  overflow: hidden;
+  min-height: calc(1em * 1.6 * 3);
+}
+
+/* サムネ画像の高さを見やすい基準に（そろえる） */
+#lumina-thumb-track .thumbnail-image {
+  height: 80px;              /* 60→80で視認性UP。小さめが良ければ60に戻してOK */
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+/* サムネ帯の“止まり心地” */
+#lumina-thumb-track {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+#lumina-thumb-track .thumbnail-item { scroll-snap-align: start; }
+/* ── 過去投稿：その場展開用パネル ── */
+.inline-entry {
+  max-width: 720px;           /* メイン・サムネと幅を揃える（必要に応じて同値に） */
+  margin: 6px auto 18px;
+  padding: 14px;
+  background: #fffef8;
+  border: 1px solid #e8d9bd;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.08);
+  box-sizing: border-box;
+}
+.inline-entry .entry-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1.35;
+  margin: 0 0 4px 0;
+  display: block;             /* 展開では省略せず全文 */
+}
+.inline-entry .expandable-content p { 
+  display: block;             /* “続きを読む”を使わず全文表示 */
+  -webkit-line-clamp: initial;
+  overflow: visible;
+}
+/* === textarea: 自動高さ調整用（スクロールバーを出さない） === */
+.modal-content textarea,
+#editContent,
+#comment-text {
+  overflow: hidden;
+  resize: none;
+}
+
+/* ── 過去投稿：その場展開（カード内）で行数制限を解除 ── */
+#lumina-past-grid .diary-entry.is-expanded .entry-title,
+#lumina-past-grid .diary-entry.is-expanded .entry-content,
+#lumina-past-grid .diary-entry.is-expanded .expandable-content p {
+  display: block;
+  -webkit-line-clamp: initial;
+  overflow: visible;
+  white-space: normal;
+}
+/* === fix: 過去投稿の「続きを読む」が隠れる問題を解消 =================== */
+/* ラッパーは切り詰めない。切り詰めは <p>.collapsed にだけ適用する */
+#lumina-past-grid .expandable-content {
+  display: block !important;
+  -webkit-line-clamp: initial !important;
+  overflow: visible !important;
+}
+
+/* 「続きを読む」用の折り畳みは <p class="collapsed"> に対して行う */
+#lumina-past-grid .expandable-content p.collapsed {
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 5 !important;  /* メインと同じ 5 行 */
+  overflow: hidden !important;
+}
+/* === textarea: 自動高さ調整用（スクロールバーを出さない） === */
+.modal-content textarea,
+#editContent,
+#comment-text {
+  overflow: hidden;
+  resize: none;
+}
+#lumina-thumb-track {
+  -ms-overflow-style: auto; /* IE/Edge */
+  scrollbar-width: auto; /* Firefox */
+}
+#lumina-thumb-track::-webkit-scrollbar {
+  display: block;                 /* Chrome/Safari: バー非表示 */
+  overflow-x: auto; /* 横スクロールバーを表示 */
+}
+
+/* 省エネ（“動きを減らす”設定に配慮） */
+@media (prefers-reduced-motion: reduce) {
+  #lumina-thumb-track { scroll-behavior: auto; }
+}
+/* === サムネイルバー：横スクロールバーを確実に表示 === */
+.thumbnail-bar,
+#lumina-thumb-track {
+  overflow-x: auto;      /* 横方向にスクロール可能 */
+  overflow-y: hidden;    /* 縦の余計なバーは消す */
+  -ms-overflow-style: auto; /* 旧Edge/IE 用 */
+  scrollbar-width: auto;    /* Firefox：バーを表示（thinにしたいなら 'thin'） */
+}
+
+/* WebKit系（Chrome / Safari / 新Edge） */
+.thumbnail-bar::-webkit-scrollbar,
+#lumina-thumb-track::-webkit-scrollbar {
+  height: 10px;          /* 横バーの太さ（お好みで 6〜12px） */
+}
+
+.thumbnail-bar::-webkit-scrollbar-track,
+#lumina-thumb-track::-webkit-scrollbar-track {
+  background: #f3e6c9;   /* トラック（レール）色：紙風 */
+}
+
+/* === サムネ用：スクロールバーのつまみ（thumb） === */
+.thumbnail-bar::-webkit-scrollbar-thumb,
+#lumina-thumb-track::-webkit-scrollbar-thumb {
+  background: #d9c7a3;   /* 紙系の色味 */
+  border-radius: 6px;
+}
+
+#lumina-past-grid .diary-entry .entry-title,
+#lumina-past-grid .diary-entry h3 {
+  margin-top: 8px !important;   /* 4〜12pxで好み調整OK */
+}
+
+/* 前へ／次へボタンを非表示 */
+#prevBtn,
+#nextBtn {
+  display: none !important;
+}
+/* 未ログイン案内（フォームの中で邪魔にならないトーン） */
+.form-login-prompt {
+  margin: 8px 0 12px;
+  text-align: center;
+  font-size: 14px;
+  color: #555;
+}
+
+/* 汎用の非表示 */
+.is-hidden { display: none !important; }
+/* =========================
+   プロフィールアイコン 選択中スタイル
+   ========================= */
+.profile-icon.selected {
+  outline: 3px solid #f4b23d;  /* ベージュ寄りのオレンジ枠 */
+  outline-offset: 1px;         /* 枠とアイコンの間隔 */
+  border-radius: 50%;          /* 丸く */
+  transform: scale(1.04);      /* ちょっと拡大 */
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.18));
+}
+/* ==== 通知ベルの未読バッジ ==== */
+#notifBadge {
+  display: inline-flex;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #e74c3c;
+  color: #fff;
+  font-size: 12px;
+  line-height: 18px;
+  justify-content: center;
+  align-items: center;
+  transform: translate(-10px, -8px);
+}
+
+/* 既存 .menu-icon と並ぶ前提（必要なら微調整） */
+#iconBell { position: relative; }
+/* ==== お気に入り：SVGボタン用 ==== */
+.likeBtn.btn-paper{ gap:0; }          /* 以前の「アイコン+文字」用余白を無効化 */
+.likeBtn .favSvg{
+  height: 20px;                        /* お好みで 18〜22px 程度 */
+  width: auto;
+  vertical-align: middle;
+  display: inline-block;
+}
+.entry-fav-inline .likeBtn{
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+
+  /* ▼iOSの疑似ダブルタップ・ダブル発火を抑止（ここに置いてOK） */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ▼いいねアイコンの状態切り替え（未/済） */
+.likeBtn .favSvg {
+  /* 未いいね時：線だけ（塗りなし） */
+  fill: none;
+  stroke: #a67c52;
+  stroke-width: 2px;
+  transition: fill .18s ease, stroke .18s ease, transform .12s ease;
+}
+
+/* いいね済み（JSが .is-liked / aria-pressed=true を付与） */
+.likeBtn.is-liked .favSvg,
+.likeBtn[aria-pressed="true"] .favSvg {
+  fill: #e74c3c;
+  stroke: #e74c3c;
+}
+
+/* 軽いフィードバック（任意） */
+.likeBtn.is-liked .favSvg {
+  transform: scale(1.05);
+}
+
+.entry-fav-inline .likeBtn:focus { outline: none; }
+.entry-fav-inline .likeBtn:focus-visible {
+  outline: 2px solid #d7b98d;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* SVGサイズ */
+.likeBtn .favSvg{
+  width: 20px;
+  height: 20px;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ベル用ラッパー：1セルにアイコン＋バッジを重ねる */
+.icon-bell{
+  position: relative;
+  width: 40px;  /* .menu-icon と同じ */
+  height: 40px;
+  display: grid;
+  place-items: center;
+}
+
+/* 未読バッジ：オーバーレイ配置（レイアウトを崩さない） */
+.icon-bell #notifBadge{
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  transform: none; /* 既存のtranslate指定を打ち消す */
+}
+/* --- 通知モーダル：シンプル表示 --- */
+#notif-modal .notif-grid.simple{
+  margin: 8px 0 12px;
+  display: grid;
+  row-gap: 6px;           /* 行間だけ少し */
+  font-size: 14px;        /* コンパクト */
+}
+
+#notif-modal .notif-grid.simple .notif-row{
+  display: grid;
+  grid-template-columns: 22px 1fr; /* 左:チェック 右:テキスト */
+  column-gap: 8px;
+  align-items: center;
+}
+
+#notif-modal .notif-grid.simple input[type="checkbox"]{
+  width: 18px; height: 18px;
+  accent-color: #e0a84d;  /* 好みで変更/削除OK */
+  cursor: pointer;
+}
+
+#notif-modal .notif-grid.simple .notif-text{
+  white-space: nowrap;    /* 1行 */
+  overflow: hidden;
+  text-overflow: ellipsis;/* 長文は…で省略（titleで全文確認） */
+}
+/* 通知モーダルをコンパクトに（サイズ/余白/文字） */
+#notif-modal .modal-content{
+  width: auto;              /* 既存の固定幅があっても上書き */
+  max-width: 420px;         /* ← 好みで 360〜440px に調整OK */
+  min-width: 280px;
+  padding: 14px 16px;       /* 余白を少し縮める */
+  font-size: 14px;          /* 全体の文字を少しだけ小さく */
+}
+
+/* 見出しと説明もコンパクトに */
+#notif-modal h3{ font-size: 16px; margin: 0 0 6px; }
+#notif-modal p { font-size: 13px; margin: 0 0 10px; color:#6b5d4a; }
+
+/* 行間＆ボタンを詰める（入れていれば効く） */
+#notif-modal .notif-grid{ row-gap: 6px; }
+#notif-modal .modal-buttons{ gap: 8px; justify-content: flex-end; }
+#notif-modal .btn-paper{ padding: 6px 12px; font-size: 13px; }
+
+/* 画面がとても狭い時は端末幅を優先 */
+@media (max-width: 480px){
+  #notif-modal .modal-content{ max-width: 92vw; }
+}
+/* ==== 通知モーダル：チェックとテキストの縦位置をきっちり揃える ==== */
+/* 行全体を上下センターに */
+#notif-modal .notif-grid .notif-row{
+  display: grid;
+  grid-template-columns: 20px 1fr; /* 左：チェック 右：テキスト */
+  column-gap: 10px;
+  align-items: center;            /* ← ここで上下センター揃え */
+}
+
+/* チェックボックスの微調整（既存の margin-top などを無効化） */
+#notif-modal .notif-grid .notif-row input[type="checkbox"]{
+  width: 18px;
+  height: 18px;
+  margin: 0;                      /* 既存の margin-top を打ち消す */
+  vertical-align: middle;
+  transform: translateY(0px);     /* まだ少し高く見える場合の 1px 調整 */
+}
+
+/* テキスト側（1行想定） */
+#notif-modal .notif-grid .notif-text{
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* === LUMINA: ヘッダー（スマホ最優先ルール） ===================== */
+@media (max-width: 600px) {
+  /* 1) 左端に寄せるため、コンテナ左パディングを0に */
+  .app-header { padding: 0; }
+  .header-container {
+    padding-left: 0;            /* ← ここが“左に寄らない”主因 */
+    padding-right: 8px;         /* 右は少しだけ残す（任意） */
+    max-width: 100%;            /* 念のため横幅制限を外す */
+  }
+
+  /* 2) ロゴを左端に固定＆サイズを一本化 */
+  .header-logo {
+    margin: 0;
+    display: block;
+    transform: none;
+    width: 120px;               /* ← スマホ用の基準サイズ（好みで90〜140px） */
+    height: auto;
+  }
+
+  /* 3) アイコンは小さく・詰まりすぎない程度に */
+  .icon-group {
+    grid-auto-columns: 32px;    /* 40→32（アイコン30pxに合わせる） */
+    column-gap: 6px;            /* 1pxは詰まり過ぎなので程よく */
+  }
+  .menu-icon {
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+  }
+}
