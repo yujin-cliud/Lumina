@@ -36,10 +36,18 @@ let pastAutoloadLock = false;
   }
 
   async function saveProfile(uid, iconUrl) {
-    const ref = window.doc(window.db, "profiles", uid);
-    await setDoc(ref, { iconUrl }, { merge: true });
-    profileCache.set(uid, { iconUrl });
-  }
+  const ref = window.doc(window.db, "profiles", uid);
+  await setDoc(ref, { iconUrl }, { merge: true });
+  profileCache.set(uid, { iconUrl });
+}
+
+// ★ 追加：ユーザー名をプロフィールに保存
+async function upsertProfileDisplayName(uid, displayName) {
+  if (!uid) return;
+  const ref = window.doc(window.db, "profiles", uid);
+  await setDoc(ref, { displayName }, { merge: true });
+}
+
 // ===== 通知設定：プロフィール読込/保存ユーティリティ =====
 async function loadNotifySettings(uid) {
   if (!uid) return {
@@ -849,10 +857,18 @@ document.getElementById("cancelBtn")?.addEventListener("click", () => {
 });
 
   const formWrapper = document.querySelector(".form-wrapper");
-  const iconPost = document.getElementById("iconPost");
-  iconPost?.addEventListener("click", () => {
-    formWrapper.classList.toggle("active");
-  });
+const iconPost = document.getElementById("iconPost");
+iconPost?.addEventListener("click", () => {
+  const willOpen = !formWrapper.classList.contains("active");
+  formWrapper.classList.toggle("active");
+
+  if (willOpen) {
+    // 開く瞬間だけ一回プリセット。以後は dirty で上書き禁止
+    hasUserEditedName = false;                        // モーダル単位で一度だけ許可
+    autoFillName(window.currentUser || null);
+  }
+});
+
   // ヘッダーロゴ（タイトル）クリックで「最新投稿」に戻る
 document.querySelector(".header-logo")?.addEventListener("click", async () => {
   // 検索欄をクリア（フィルタもリセットしたいので）
@@ -901,8 +917,16 @@ const tags = tagsRaw
   ? tagsRaw.split(",").map(t => t.trim()).filter(Boolean)
   : [];
 
+// ★ 追加：プロフィールの displayName を更新（入力があるときだけ）
+if (uid && authorName && authorName !== "匿名さん") {
+  try {
+    await upsertProfileDisplayName(uid, authorName);
+  } catch (e) { console.warn("profile name save failed", e); }
+}
+
 // 画像は今は任意（未実装なら空でOK）
-const imageUrl = "";
+const imageUrl = newPostImageUrl || "";
+
 
 const entry = {
   uid,
@@ -915,6 +939,7 @@ const entry = {
   iconUrl: getSelectedIconUrlForEntry(),
   createdAt: serverTimestamp()   // ← サーバ時刻を保存
 };
+
 
 
 
@@ -1229,6 +1254,34 @@ editImageFile?.addEventListener("change", async (e) => {
     if (editImageFile) editImageFile.value = "";
   }
 });
+// ▼ 新規投稿フォーム用：選択画像を Cloudinary にアップロードして URL を保持
+let newPostImageUrl = "";
+
+const imageInput = document.getElementById("imageInput");
+imageInput?.addEventListener("change", async (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", UPLOAD_PRESET);
+
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`, {
+      method: "POST",
+      body: formData
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error("upload failed");
+
+    newPostImageUrl = json.secure_url || json.url || "";
+    e.target.value = ""; // 選択欄リセット（同じファイルを選び直せるように）
+  } catch (err) {
+    console.error(err);
+    alert("画像のアップロードに失敗しました。通信状況を確認して再試行してね。");
+  }
+});
+
 // ===== Google ログイン/ログアウト (Firebase v10.12.2) =====
 import {
   getAuth,
@@ -1350,30 +1403,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // ===== 名前のオートフィル & ローカル保存（Step 1）=====
 const LUMINA_NAME_KEY = "luminaName";
+let hasUserEditedName = false; // ★追加：ユーザーが一度でも触ったら true
 
-// 保存済みの名前を取得
 function getSavedName() {
   try { return localStorage.getItem(LUMINA_NAME_KEY) || ""; } catch { return ""; }
 }
-
-// 名前を保存
 function saveName(v) {
   try { localStorage.setItem(LUMINA_NAME_KEY, v ?? ""); } catch {}
 }
-
-// input#username に値をセット
 function setNameField(val) {
   const el = document.getElementById("username");
   if (el && typeof val === "string") el.value = val;
 }
 
 /**
- * ログイン状態に応じて名前欄を自動入力
- * 優先度：現在の入力値 → localStorage → Googleの displayName
+ * 初期表示用の一回きりのプリセット。
+ * - ユーザーが編集済み（hasUserEditedName=true）なら上書きしない
+ * - 入力中（フォーカス中）も上書きしない
+ * 優先度：現在の入力値 → localStorage → Google displayName
  */
 function autoFillName(user) {
   const input = document.getElementById("username");
   if (!input) return;
+
+  if (hasUserEditedName) return;                   // ← 触ってたら上書き禁止
+  if (document.activeElement === input) return;    // ← 入力中も上書き禁止
 
   const current   = (input.value || "").trim();
   const fromLS    = (getSavedName() || "").trim();
@@ -1383,13 +1437,16 @@ function autoFillName(user) {
   if (next) setNameField(next);
 }
 
-// 入力が変わったらローカル保存（次回の初期値にする）
+
+// 入力が変わったらローカル保存し、以後は上書き禁止（dirty）
 document.addEventListener("input", (e) => {
   if (e?.target && e.target.id === "username") {
-    saveName(e.target.value.trim());
+    hasUserEditedName = true;                 // ★ ユーザーが触ったことを記録
+    saveName(e.target.value.trim());          // 値は保存
+    // autoFillName(...) は呼ばない（上書き事故を防ぐ）
   }
-  autoFillName(window.currentUser || null);
 });
+
 // ==========================
 // ダミー投稿一括投入（暫定ユーティリティ）
 // ==========================
